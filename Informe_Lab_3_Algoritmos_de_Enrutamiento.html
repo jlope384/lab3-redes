@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Informe — Laboratorio 3: Protocolos de Enrutamiento</title>
+  <style>
+    @page { size: letter; margin: 0.78in 0.82in 0.72in; }
+    :root { --ink:#182535; --blue:#1f4d78; --light:#edf3f8; --line:#b8c8d6; --muted:#5d6c79; }
+    * { box-sizing:border-box; }
+    body { color:var(--ink); font-family: Arial, Helvetica, sans-serif; font-size:10.4pt; line-height:1.36; margin:0; }
+    h1,h2,h3 { color:var(--blue); page-break-after:avoid; }
+    h1 { font-size:17pt; margin:0 0 10pt; border-bottom:2px solid var(--blue); padding-bottom:6pt; }
+    h2 { font-size:13pt; margin:18pt 0 6pt; }
+    h3 { font-size:11pt; margin:11pt 0 3pt; }
+    p { margin:0 0 7pt; }
+    ul,ol { margin:3pt 0 8pt 19pt; padding:0; }
+    li { margin:0 0 3pt; }
+    code { font-family:"SFMono-Regular", Consolas, monospace; font-size:9.1pt; color:#213c55; }
+    .kicker { color:var(--muted); font-size:10pt; font-weight:bold; letter-spacing:.04em; text-transform:uppercase; margin-bottom:8pt; }
+    .meta { width:100%; border-collapse:collapse; margin:12pt 0 16pt; font-size:10pt; }
+    .meta th { width:25%; text-align:left; color:var(--blue); background:var(--light); }
+    .meta th,.meta td { border:1px solid var(--line); padding:6pt 8pt; vertical-align:top; }
+    .note { background:var(--light); border-left:4px solid var(--blue); padding:8pt 10pt; margin:10pt 0; }
+    .flow { background:#f7f9fb; border:1px solid var(--line); padding:9pt 11pt; margin:8pt 0; font-family:"SFMono-Regular", Consolas, monospace; font-size:9.2pt; line-height:1.45; white-space:pre-wrap; }
+    table { width:100%; border-collapse:collapse; margin:7pt 0 3pt; font-size:9.5pt; page-break-inside:avoid; }
+    th { background:var(--light); color:var(--blue); text-align:left; }
+    th,td { border:1px solid var(--line); padding:5pt 6pt; vertical-align:top; }
+    .small { color:var(--muted); font-size:8.8pt; }
+    .page-break { break-before:page; page-break-before:always; }
+  </style>
+</head>
+<body>
+  <div class="kicker">Universidad del Valle de Guatemala · Facultad de Ingeniería · CC3067 Redes</div>
+  <h1>Laboratorio 3 — Protocolos de Enrutamiento</h1>
+  <p><strong>Informe técnico de implementación</strong></p>
+  <table class="meta">
+    <tr><th>Curso</th><td>CC3067 Redes — Sección 20</td><th>Fecha</th><td>13 de agosto de 2026</td></tr>
+    <tr><th>Autores</th><td colspan="3">Diego López y Javier López</td></tr>
+    <tr><th>Repositorio</th><td colspan="3">Código entregado con este informe: <code>lab3-redes</code>.</td></tr>
+  </table>
+
+  <h2>1. Descripción de la práctica</h2>
+  <p>Se implementó una red simulada de routers con protocolo <em>Link State</em> sobre TCP. Cada router descubre el estado de sus vecinos, difunde su información de enlaces mediante LSA, reconstruye el grafo de red y calcula rutas de menor costo con Dijkstra. La tabla resultante se persiste como CSV y alimenta el plano de datos.</p>
+  <p>El plano de datos recibe tramas codificadas con Hamming(7,4), corrige un error de bit por bloque cuando corresponde, recupera el mensaje JSON y lo reenvía al siguiente salto indicado por la tabla. La práctica incluye una aplicación ATM–Banco: ambos son endpoints, no routers, y se conectan a sus respectivos gateways mediante sockets.</p>
+
+  <h2>2. Arquitectura y protocolo</h2>
+  <div class="flow">Plano de control:  HELLO ──&gt; vecinos vivos ──&gt; LSA/flooding ──&gt; grafo ──&gt; Dijkstra ──&gt; CSV
+Plano de datos:     frame Hamming ──&gt; corrección ──&gt; JSON/destino ──&gt; tabla CSV ──&gt; siguiente salto</div>
+  <ul>
+    <li><strong>Transporte:</strong> TCP; una conexión corta por mensaje y una línea terminada en salto de línea.</li>
+    <li><strong>Puertos:</strong> datos en el puerto configurado y control en <code>puerto_datos + 1000</code>.</li>
+    <li><strong>Configuración:</strong> <code>config/nodos.json</code>, <code>config/topologia.json</code> y <code>config/endpoints.json</code>.</li>
+    <li><strong>Concurrencia:</strong> servidores de control y datos, envío/monitoreo HELLO y refresco LSA se ejecutan en hilos daemon.</li>
+  </ul>
+
+  <h2>3. Algoritmos utilizados e implementación</h2>
+  <h3>3.1 Descubrimiento y Link State</h3>
+  <p><code>HelloManager</code> envía <code>{"type":"HELLO","from":id}</code> cada 2 s a cada vecino configurado. Un vecino pasa a UP al recibir su HELLO; si no se recibe durante 6 s, pasa a DOWN. Ambos cambios generan un LSA propio, por lo que la topología anunciada representa solamente los enlaces vivos.</p>
+  <p><code>LSAManager</code> construye LSAs con <code>origin</code>, <code>seq</code>, <code>ttl</code>, <code>links</code> y <code>from</code>. La secuencia usa milisegundos y se fuerza estrictamente creciente para tolerar reinicios. Al recibir un LSA nuevo se actualiza el grafo y se reenvía a los vecinos, excepto al último salto; LSAs duplicados o antiguos se descartan y el TTL limita la propagación.</p>
+
+  <h3>3.2 Grafo y ruta de menor costo</h3>
+  <p><code>NetworkGraph</code> reemplaza la lista de adyacencias de cada origen con el LSA más reciente. Sobre una instantánea del grafo, <code>compute_routes</code> implementa Dijkstra con una cola de prioridad (<code>heapq</code>). Para cada destino alcanzable devuelve <code>(costo, siguiente_salto)</code>; el origen y nodos no alcanzables no se escriben como rutas.</p>
+  <p>La tabla se guarda en <code>data/nodo_&lt;id&gt;_tabla_enrutamiento.csv</code> con las columnas <code>destino,siguiente_salto,ip,puerto,costo</code>. El plano de datos la recarga después de cada recálculo.</p>
+
+  <h3>3.3 Detección y corrección de errores</h3>
+  <p>El texto JSON se codifica a UTF-8 y luego a bits. <code>encode_frame</code> divide la secuencia en bloques de 4 bits, añade relleno si es necesario y aplica Hamming(7,4); un encabezado de 2 bits conserva la cantidad de relleno. <code>decode_frame</code> revierte el proceso y <code>decode</code> calcula el síndrome para corregir un único bit por bloque. Si una trama no puede reconstruirse como texto/JSON válido, se descarta.</p>
+
+  <h3>3.4 Reenvío y endpoints</h3>
+  <p><code>ForwardingLayer</code> obtiene el destino del mensaje, resuelve su gateway si es un endpoint y consulta el CSV para identificar IP y puerto del siguiente salto. Re-serializa el mismo mensaje y aplica Hamming antes de enviarlo. Cuando el gateway es local, entrega directamente al ATM o Banco. La aplicación bancaria implementa autenticación, retiro y cierre de sesión; <code>ATM1</code> se conecta a <code>A</code> y <code>BANCO1</code> a <code>D</code> según la configuración incluida.</p>
+
+  <div class="page-break"></div>
+  <h2>4. Resultados</h2>
+  <p>Se ejecutó una validación local determinista de los módulos sin dependencias externas. Todos los casos finalizaron correctamente.</p>
+  <table>
+    <thead><tr><th>Prueba</th><th>Resultado observado</th><th>Evidencia en el repositorio</th></tr></thead>
+    <tbody>
+      <tr><td>Hamming(7,4)</td><td>5 vectores de datos se recuperaron sin cambio; se corrigieron los 7 posibles errores de un bit de un bloque.</td><td><code>tests/test_hamming.py</code></td></tr>
+      <tr><td>Tramas UTF-8</td><td>5 textos, incluido <code>ñ€</code> y una cadena de 50 caracteres, realizaron recorrido completo de codificación/decodificación.</td><td><code>tests/test_hamming.py</code></td></tr>
+      <tr><td>Dijkstra</td><td>Para A→C se eligió A→B→C, costo 3, en lugar del enlace directo de costo 4.</td><td><code>tests/test_routing.py</code></td></tr>
+      <tr><td>LSA</td><td>Las secuencias propias son crecientes; un LSA repetido o antiguo no se procesa nuevamente.</td><td><code>tests/test_lsa_flooding.py</code></td></tr>
+      <tr><td>Dos routers locales</td><td>Los logs muestran enlace A–B UP y tablas CSV recíprocas de costo 1.</td><td><code>logs/A.out</code>, <code>logs/B.out</code>, CSV A/B</td></tr>
+    </tbody>
+  </table>
+  <p class="small">La ejecución se hizo con un script equivalente a los casos de prueba, porque el entorno de revisión no tenía <code>pytest</code> instalado. La suite incluida contiene 10 pruebas: 3 de Hamming/enmarcado, 4 de LSA y 3 de rutas.</p>
+  <h2>5. Discusión</h2>
+  <p>La separación entre plano de control y plano de datos mantiene clara la responsabilidad de cada componente: HELLO/LSA producen conocimiento de red; Dijkstra lo convierte en rutas; el reenvío solamente consume esas rutas. Esta organización evita duplicar lógica y permite sustituir la topología de prueba por la topología Tailscale desde archivos JSON.</p>
+  <p>El flooding evita ciclos innecesarios mediante <code>seq</code>, exclusión del vecino emisor y TTL. El refresco periódico de 15 s reduce el riesgo de que un router recién iniciado no reciba información previa. Hamming(7,4) cumple el requisito de corrección de un bit por bloque, pero no garantiza corregir errores múltiples; una trama inválida se descarta en vez de reenviarse corrupta.</p>
+  <p>Como limitaciones prácticas, la topología incluida es un placeholder local y las rutas solo reflejan LSAs recibidos. La validación final debe comprobar que las tres parejas usan exactamente el mismo formato de control/datos, IDs basados en IP Tailscale y el mismo offset de puerto.</p>
+
+  <h2>6. Conclusiones y comentarios</h2>
+  <ol>
+    <li>La implementación cumple el flujo requerido: descubrimiento de vecinos, LSA con flooding, reconstrucción de grafo, Dijkstra, CSV y reenvío por sockets.</li>
+    <li>La tabla de ruteo permite escoger el siguiente salto óptimo; la prueba A→C confirma que se prefiere una ruta multi-salto menos costosa frente a un enlace directo más caro.</li>
+    <li>Hamming(7,4) se integra en cada salto de datos, preservando el JSON y corrigiendo un error de bit por bloque.</li>
+    <li>Antes de la entrega/demostración se deben reemplazar los IDs locales por IPs Tailscale, acordar el protocolo con las otras parejas y registrar una prueba extremo a extremo ATM–Banco a través de la topología de seis nodos.</li>
+  </ol>
+
+  <h2>7. Referencias</h2>
+  <ol>
+    <li>Universidad del Valle de Guatemala. <em>Lab 3 — Algoritmos de Enrutamiento — 2026</em>, CC3067 Redes.</li>
+    <li>Repositorio del grupo <code>lab3-redes</code>: código fuente, configuraciones, pruebas y logs de esta entrega.</li>
+    <li>Dijkstra, E. W. (1959). <em>A note on two problems in connexion with graphs</em>. Numerische Mathematik, 1, 269–271.</li>
+    <li>Hamming, R. W. (1950). <em>Error detecting and error correcting codes</em>. Bell System Technical Journal, 29(2), 147–160.</li>
+  </ol>
+</body>
+</html>
