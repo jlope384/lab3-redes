@@ -8,7 +8,9 @@ para poder interoperar sobre la red de 6 nodos (Tailscale).
 
 - Transporte: TCP. Un mensaje por línea (`\n`), sin prefijo de longitud. Cada envío abre
   una conexión corta, manda la línea y cierra.
-- Puertos: uno de datos (`config/nodos.json`) y uno de control = `puerto_datos + 1000`.
+- Puertos: un único puerto por nodo (`config/nodos.json`) para control y datos. Quien recibe
+  distingue mirando el primer carácter de la línea: `{` = control (HELLO/LSA, JSON), `0`/`1` =
+  datos (frame ya codificado con Hamming(7,4)).
 - `HELLO`: `{"type": "HELLO", "from": "<id>"}`, cada 2s, sin ACK; 6s sin verlo = enlace DOWN.
 - `LSA`: `{"type": "LSA", "origin": <id>, "seq": <int>, "ttl": <int>, "links": {...}, "from": <id>}`.
   `origin` no cambia al reenviar; `from` sí (queda como el último salto). `seq` se deriva de
@@ -60,5 +62,5 @@ pytest
 1. Todos en la misma tailnet de Tailscale (`tailscale ip -4` para obtener la IP de cada quien).
 2. Reemplazar las claves de `config/nodos.json` (y las de `topologia.json`/`endpoints.json`)
    por las IPs Tailscale reales, según la topología de 6 nodos asignada.
-3. Confirmar con las otras parejas que el offset de puerto de control (+1000) y el formato
-   de HELLO/LSA de arriba son los mismos que usan ellas.
+3. Confirmar con las otras parejas que el esquema de puerto único y el formato de HELLO/LSA
+   de arriba son los mismos que usan ellas.

@@ -16,7 +16,7 @@ from src.router.hello import HelloManager
 from src.router.lsa import LSAManager
 from src.router.network_graph import NetworkGraph
 from src.router.routing import compute_routes
-from src.transport.sockets import control_port, start_line_server
+from src.transport.sockets import start_line_server
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LSA_REFRESH_INTERVAL = 15.0  # re-flood periodico aunque nada haya cambiado
@@ -78,15 +78,21 @@ def main() -> None:
     def on_local_deliver(message: dict) -> None:
         print(f"[{node_id}] mensaje entregado localmente a {message.get('destination')}: {message}", flush=True)
 
-    forwarding = ForwardingLayer(
-        node_id, self_addr["ip"], self_addr["port"], table, addressbook, endpoints, on_local_deliver
-    )
+    forwarding = ForwardingLayer(node_id, table, addressbook, endpoints, on_local_deliver)
 
-    def on_control_message(raw_line: str, _addr) -> None:
+    def on_incoming_line(raw_line: str, addr: tuple) -> None:
+        # Un solo puerto por nodo para todo (control y datos, asi lo esperan
+        # las otras 2 parejas): un frame de datos ya paso por Hamming(7,4),
+        # asi que solo tiene '0'/'1'; un mensaje de control (HELLO/LSA)
+        # siempre es JSON y empieza con '{'.
+        if raw_line and raw_line[0] in "01":
+            forwarding.handle_frame(raw_line, addr)
+            return
+
         try:
             message = json.loads(raw_line)
         except ValueError:
-            print(f"[{node_id}] linea de control invalida descartada: {raw_line!r}", flush=True)
+            print(f"[{node_id}] linea invalida descartada: {raw_line!r}", flush=True)
             return
 
         msg_type = message.get("type")
@@ -97,9 +103,7 @@ def main() -> None:
         else:
             print(f"[{node_id}] tipo de paquete de control desconocido ignorado: {msg_type!r}", flush=True)
 
-    control_port_value = control_port(self_addr["port"])
-    start_line_server(self_addr["ip"], control_port_value, on_control_message)
-    forwarding.start()
+    start_line_server(self_addr["ip"], self_addr["port"], on_incoming_line)
     hello_manager.start()
 
     def _lsa_refresh_loop() -> None:
@@ -117,8 +121,7 @@ def main() -> None:
     lsa_manager.flood_own_lsa()
 
     print(
-        f"[{node_id}] escuchando control en {self_addr['ip']}:{control_port_value}, "
-        f"datos en {self_addr['ip']}:{self_addr['port']}",
+        f"[{node_id}] escuchando en {self_addr['ip']}:{self_addr['port']} (control + datos)",
         flush=True,
     )
 

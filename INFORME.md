@@ -110,9 +110,10 @@ El nodo (`src/node.py`) levanta 4 componentes concurrentes (hilos) sobre TCP:
 ### 4.1 Transporte (`src/transport/sockets.py`)
 
 TCP puro. Cada envío abre una conexión corta, manda **una línea terminada en `\n`** y cierra
-(no hay conexión persistente entre vecinos, ni prefijo de longitud). Cada nodo expone dos
-puertos: uno de **datos** (`config/nodos.json`) y uno de **control** = `puerto_datos + 1000`,
-donde llegan HELLO y LSA.
+(no hay conexión persistente entre vecinos, ni prefijo de longitud). Cada nodo expone un
+**único puerto** (`config/nodos.json`) para control y datos: quien recibe distingue mirando
+el primer carácter de la línea (`{` = JSON de control HELLO/LSA, `0`/`1` = frame de datos
+codificado con Hamming).
 
 ### 4.2 Descubrimiento de vecinos (`src/router/hello.py`)
 

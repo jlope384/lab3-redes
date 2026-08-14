@@ -17,7 +17,7 @@ import threading
 import time
 from typing import Callable
 
-from src.transport.sockets import control_port, send_line
+from src.transport.sockets import send_line
 
 DEFAULT_TTL = 16
 
@@ -96,6 +96,6 @@ class LSAManager:
             if not addr:
                 continue
             try:
-                send_line(addr["ip"], control_port(addr["port"]), line)
+                send_line(addr["ip"], addr["port"], line)
             except OSError:
                 pass  # vecino caido/no disponible

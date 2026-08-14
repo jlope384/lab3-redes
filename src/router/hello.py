@@ -13,7 +13,7 @@ import threading
 import time
 from typing import Callable
 
-from src.transport.sockets import control_port, send_line
+from src.transport.sockets import send_line
 
 DEFAULT_INTERVAL = 2.0
 DEFAULT_TIMEOUT = 6.0
@@ -69,7 +69,7 @@ class HelloManager:
                 if not addr:
                     continue
                 try:
-                    send_line(addr["ip"], control_port(addr["port"]), hello_line)
+                    send_line(addr["ip"], addr["port"], hello_line)
                 except OSError:
                     pass  # vecino caido/no disponible todavia; el watchdog lo marcara DOWN
             time.sleep(self.interval)

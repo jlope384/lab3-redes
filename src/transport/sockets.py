@@ -1,10 +1,13 @@
 """Utilidades TCP compartidas por routers, ATM y banco.
 
-Protocolo de transporte acordado: TCP, un mensaje por linea terminada en
-'\n', sin prefijo de longitud. Cada envio abre una conexion corta, manda la
-linea y cierra (no hay conexion persistente entre vecinos).
+Protocolo de transporte acordado con las otras 2 parejas: TCP, un mensaje por
+linea terminada en '\n', sin prefijo de longitud. Cada envio abre una
+conexion corta, manda la linea y cierra (no hay conexion persistente entre
+vecinos). Un UNICO puerto por nodo para todo (control y datos, asi lo esperan
+las otras 2 parejas de la topologia) — quien recibe distingue mirando el
+primer caracter de la linea:
 
-- Plano de control (HELLO/LSA): la linea es JSON plano.
+- Plano de control (HELLO/LSA): la linea es JSON plano (empieza con '{').
 - Plano de datos: la linea es una cadena de bits ('0'/'1') ya codificada con
   Hamming(7,4).
 """
@@ -16,11 +19,6 @@ from typing import Callable
 
 BUFFER_SIZE = 4096
 ENCODING = "utf-8"
-CONTROL_PORT_OFFSET = 1000  # puerto de control = puerto de datos + este offset
-
-
-def control_port(data_port: int) -> int:
-    return data_port + CONTROL_PORT_OFFSET
 
 
 def send_line(ip: str, port: int, text: str, timeout: float = 3.0) -> None:

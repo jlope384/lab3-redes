@@ -10,7 +10,7 @@ import threading
 from typing import Callable
 
 from src.linklayer.framing import bits_to_text, decode_frame, encode_frame, text_to_bits
-from src.transport.sockets import send_line, start_line_server
+from src.transport.sockets import send_line
 
 
 class RoutingTable:
@@ -67,25 +67,18 @@ class ForwardingLayer:
     def __init__(
         self,
         self_id: str,
-        ip: str,
-        port: int,
         table: RoutingTable,
         addressbook: dict,
         endpoints: dict | None = None,
         on_local_deliver: Callable[[dict], None] | None = None,
     ) -> None:
         self.self_id = self_id
-        self.ip = ip
-        self.port = port
         self.table = table
         self.addressbook = addressbook
         self.endpoints = endpoints or {}
         self.on_local_deliver = on_local_deliver
 
-    def start(self) -> None:
-        start_line_server(self.ip, self.port, self._on_frame)
-
-    def _on_frame(self, raw_frame: str, _addr) -> None:
+    def handle_frame(self, raw_frame: str, _addr) -> None:
         try:
             data_bits = decode_frame(raw_frame)
             message = json.loads(bits_to_text(data_bits))
