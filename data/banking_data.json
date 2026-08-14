@@ -1,0 +1,8 @@
+{
+  "BANCO1": {
+    "cuentas": [
+      {"usuario": "Javier", "pin": "1234", "saldo": 1000.0},
+      {"usuario": "Pedro", "pin": "4321", "saldo": 500.0}
+    ]
+  }
+}

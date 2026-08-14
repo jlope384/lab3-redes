@@ -1,0 +1,5 @@
+{
+  "_comment": "Mapea cada endpoint (ATM/servidor, no son routers) a su router gateway.",
+  "ATM1": "A",
+  "BANCO1": "D"
+}

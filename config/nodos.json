@@ -1,0 +1,11 @@
+{
+  "_comment": "IDs de prueba local (127.0.0.1 + puertos distintos). Antes de la prueba de interoperabilidad, cambien las claves A/B/... por la IP Tailscale real de cada nodo (asi lo pide el protocolo: origin/destination/from = IP real). El puerto de control se calcula como puerto + 1000.",
+  "A": {"ip": "127.0.0.1", "port": 6001},
+  "B": {"ip": "127.0.0.1", "port": 6002},
+  "C": {"ip": "127.0.0.1", "port": 6003},
+  "D": {"ip": "127.0.0.1", "port": 6004},
+  "E": {"ip": "127.0.0.1", "port": 6005},
+  "F": {"ip": "127.0.0.1", "port": 6006},
+  "ATM1": {"ip": "127.0.0.1", "port": 6010},
+  "BANCO1": {"ip": "127.0.0.1", "port": 6011}
+}
