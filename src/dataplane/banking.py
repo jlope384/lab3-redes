@@ -20,11 +20,11 @@ _ACTIVE_SESSIONS: dict = {}         # atm_id -> usuario con sesion activa en ese
 
 
 def auth(origin: str, destination: str, usuario: str, pin: str) -> dict:
-    return build_message("AUTH", origin, destination, {"usuario": usuario, "pin": pin})
+    return build_message("AUTH", origin, destination, {"user": usuario, "pin": pin})
 
 
 def withdraw(origin: str, destination: str, usuario: str, monto: float) -> dict:
-    return build_message("WITHDRAW", origin, destination, {"usuario": usuario, "monto": monto})
+    return build_message("WITHDRAW", origin, destination, {"cuenta": usuario, "monto": monto})
 
 
 def logout(origin: str, destination: str) -> dict:
@@ -49,7 +49,7 @@ def handle_incoming(message: dict) -> dict:
     payload = message.get("payload") or {}
 
     if msg_type == "AUTH":
-        usuario = payload.get("usuario")
+        usuario = payload.get("user")
         pin = payload.get("pin")
         cuenta = _accounts_for(banco).get(usuario)
 

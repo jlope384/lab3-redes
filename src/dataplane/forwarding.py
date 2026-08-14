@@ -115,6 +115,11 @@ class ForwardingLayer:
         route = self.table.lookup(target)
         if not route:
             return  # sin ruta conocida todavia
+        print(
+            f"[{self.self_id}] reenviando datagrama {message.get('origin')} -> "
+            f"{message.get('destination')} via {route['siguiente_salto']}",
+            flush=True,
+        )
         self._send(message, route["ip"], route["puerto"])
 
     def _deliver_to_endpoint(self, message: dict, destino: str) -> None:

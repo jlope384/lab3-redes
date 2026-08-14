@@ -1,9 +1,9 @@
 {
-  "_comment": "Vecinos directos y costo de enlace por nodo. Placeholder para pruebas locales: reemplacen por la topologia real asignada dentro de los 6 nodos del grupo (3 parejas).",
-  "A": {"B": 1, "C": 4},
-  "B": {"A": 1, "C": 2, "D": 5},
-  "C": {"A": 4, "B": 2, "D": 1},
-  "D": {"B": 5, "C": 1, "E": 3},
-  "E": {"D": 3, "F": 1},
-  "F": {"E": 1}
+  "_comment": "Topologia real asignada al grupo (6 nodos, todos los enlaces costo 1). Yo soy 'u'.",
+  "u": {"v": 1, "x": 1},
+  "v": {"u": 1, "y": 1, "z": 1, "w": 1},
+  "w": {"z": 1, "v": 1},
+  "x": {"u": 1},
+  "y": {"v": 1, "z": 1},
+  "z": {"y": 1, "w": 1, "v": 1}
 }
