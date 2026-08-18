@@ -1,5 +1,6 @@
 {
   "_comment": "Mapea cada endpoint (ATM/servidor, no son routers) a su router gateway.",
-  "ATM1": "X",
-  "Promerica": "W"
+  "ATM1": "U",
+  "Javier_Lopez": "X",
+  "Promerica": "V"
 }

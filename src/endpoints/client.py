@@ -1,8 +1,16 @@
-"""Cliente ATM de prueba: se conecta a su router gateway y envia operaciones
+"""Nodo cliente ATM (Lab 3): se conecta a su router gateway y envia operaciones
 bancarias usando el JSON {type, origin, destination, payload} del protocolo
-acordado.
+acordado con las otras parejas (ver Lab 3 Protocolo Proposal.pdf).
 
-Uso: python -m src.endpoints.atm <self_id> <gateway_id> <bank_id> [--user U] [--pin P]
+Flujo: se autentica una vez (AUTH); si el banco acepta, se queda "conectado"
+(en realidad: sigue en el mismo proceso, escuchando respuestas del banco por
+su propio socket) y muestra un menu para hacer retiros. Al elegir "cerrar
+sesion" manda LOGOUT y termina el programa (deja de escuchar).
+
+No confundir con Extras/server.py, que es la demo de capas del Lab 2
+(login/withdraw/logout con framing propio) usada como referencia.
+
+Uso: python -m src.endpoints.client <self_id> <gateway_id> <bank_id> [--user U] [--pin P]
 """
 from __future__ import annotations
 
@@ -12,11 +20,13 @@ import os
 import queue
 
 from src.dataplane.banking import auth, logout, withdraw
-from src.linklayer.framing import bits_to_text, decode_frame, encode_frame, text_to_bits
+from src.linklayer.framing import bits_to_text, text_to_bits
+from src.linklayer.framing import decode_frame as hamming_decode
+from src.linklayer.framing import encode_frame as hamming_encode
 from src.transport.sockets import send_line, start_line_server
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESPUESTA_TIMEOUT = 15.0
+RESPUESTA_TIMEOUT = 5.0
 
 
 def load_addressbook() -> dict:
@@ -24,9 +34,10 @@ def load_addressbook() -> dict:
         return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
 
 
-def send_message(ip: str, port: int, message: dict) -> None:
+def send_message(gateway_ip: str, gateway_port: int, message: dict) -> None:
     bits = text_to_bits(json.dumps(message))
-    send_line(ip, port, encode_frame(bits))
+    encoded = hamming_encode(bits)
+    send_line(gateway_ip, gateway_port, encoded)
 
 
 def main() -> None:
@@ -35,22 +46,24 @@ def main() -> None:
     parser.add_argument("gateway_id", help="Id del router gateway en config/nodos.json")
     parser.add_argument("bank_id", help="Id del servidor bancario (destino final)")
     parser.add_argument("--user", help="Usuario a autenticar (si no se da, se pregunta por consola)")
-    parser.add_argument("--pin", help="PIN del usuario (si no se da, se pregunta por consola)")
+    parser.add_argument("--pin", help="PIN del usuario a autenticar (si no se da, se pregunta por consola)")
     args = parser.parse_args()
 
     addressbook = load_addressbook()
-    for required in (args.self_id, args.gateway_id):
-        if required not in addressbook:
-            raise SystemExit(f"'{required}' no existe en config/nodos.json")
+    if args.self_id not in addressbook:
+        raise SystemExit(f"'{args.self_id}' no existe en config/nodos.json")
+    if args.gateway_id not in addressbook:
+        raise SystemExit(f"'{args.gateway_id}' no existe en config/nodos.json")
 
     self_addr = addressbook[args.self_id]
     gateway = addressbook[args.gateway_id]
 
+    # Cola donde el listener de respuestas deja cada mensaje que llega del banco.
     inbox: "queue.Queue[dict]" = queue.Queue()
 
-    def on_response(raw_frame: str, _addr) -> None:
+    def on_response(raw_bits: str, _addr) -> None:
         try:
-            data_bits = decode_frame(raw_frame)
+            data_bits = hamming_decode(raw_bits)
             message = json.loads(bits_to_text(data_bits))
         except (ValueError, UnicodeDecodeError):
             return  # frame corrupto, se descarta
@@ -72,9 +85,9 @@ def main() -> None:
             return inbox.get(timeout=RESPUESTA_TIMEOUT)
         except queue.Empty:
             print(
-                f"[{args.self_id}] no hubo respuesta en {RESPUESTA_TIMEOUT}s. Revisa que todos los "
-                f"routers entre '{args.gateway_id}' y '{args.bank_id}' esten corriendo y que "
-                f"config/endpoints.json tenga a '{args.bank_id}'."
+                f"[{args.self_id}] no hubo respuesta en {RESPUESTA_TIMEOUT}s. "
+                f"Revisa que todos los routers entre '{args.gateway_id}' y '{args.bank_id}' "
+                f"esten corriendo (y que config/endpoints.json tenga a '{args.bank_id}')."
             )
             return None
 
@@ -98,8 +111,9 @@ def main() -> None:
         opcion = input("Elige una opcion: ").strip()
 
         if opcion == "1":
+            monto_str = input("Monto a retirar: ").strip()
             try:
-                monto = float(input("Monto a retirar: ").strip())
+                monto = float(monto_str)
             except ValueError:
                 print("Monto invalido.")
                 continue
@@ -122,5 +136,4 @@ def main() -> None:
             print("Opcion invalida.")
 
 
-if __name__ == "__main__":
-    main()
+main()

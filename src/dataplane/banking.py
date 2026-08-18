@@ -37,8 +37,8 @@ def error(origin: str, destination: str, code: str, detalle: str) -> dict:
 
 def _accounts_for(banco: str) -> dict:
     if banco not in _ACCOUNTS_CACHE:
-        cuentas = _BANKING_DATA.get(banco, {}).get("cuentas", [])
-        _ACCOUNTS_CACHE[banco] = {c["usuario"]: c for c in cuentas}
+        cuentas = _BANKING_DATA.get(banco, {}).get("Cuentas", [])
+        _ACCOUNTS_CACHE[banco] = {c["nombre"]: c for c in cuentas}
     return _ACCOUNTS_CACHE[banco]
 
 

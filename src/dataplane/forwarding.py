@@ -88,6 +88,16 @@ class ForwardingLayer:
 
     def forward(self, message: dict) -> None:
         destino = message.get("destination")
+
+        # Otras parejas mandan el id del router gateway en `destination` y el
+        # endpoint final en `_endpoint` (en vez de poner el endpoint
+        # directamente en `destination`, como hacemos nosotros). Si ese
+        # endpoint es mio, se entrega igual que si `destino` lo fuera.
+        endpoint_hint = message.get("_endpoint")
+        if endpoint_hint and self.endpoints.get(endpoint_hint) == self.self_id:
+            self._deliver_to_endpoint(message, endpoint_hint)
+            return
+
         gateway_id = self.endpoints.get(destino)
 
         # `destino` es un endpoint conocido cuyo gateway soy yo -> entrega directa.

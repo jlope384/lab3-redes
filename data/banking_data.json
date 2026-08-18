@@ -1,8 +1,122 @@
 {
-  "BANCO1": {
-    "cuentas": [
-      {"usuario": "Javier", "pin": "1234", "saldo": 1000.0},
-      {"usuario": "Pedro", "pin": "4321", "saldo": 500.0}
-    ]
-  }
+    "Promerica": {
+        "Cuentas": [
+            {
+                "id": "23089",
+                "nombre": "Pedro_Avila",
+                "pin": "1234",
+                "saldo": 1000.0
+            },
+            {
+                "id": "23415",
+                "nombre": "Javier_Lopez",
+                "pin": "4321",
+                "saldo": 500.0
+            },
+            {
+                "id": "23088",
+                "nombre": "Brandon_Rivera",
+                "pin": "5678",
+                "saldo": 750.0
+            },
+            {
+                "id": "23079",
+                "nombre": "Javier_Cifuentes",
+                "pin": "8765",
+                "saldo": 1200.0
+            },
+            {
+                "id": "23747",
+                "nombre": "Diego_Lopez",
+                "pin": "1357",
+                "saldo": 300.0
+            },
+            {
+                "id": "23405",
+                "nombre": "Javier_Benitez",
+                "pin": "2468",
+                "saldo": 800.0
+            }
+        ]
+    },
+    "Banco_Industrial": {
+        "Cuentas": [
+            {
+                "id": "23089",
+                "nombre": "Pedro_Avila",
+                "pin": "1111",
+                "saldo": 2000.0
+            },
+            {
+                "id": "23415",
+                "nombre": "Javier_Lopez",
+                "pin": "2222",
+                "saldo": 1500.0
+            },
+            {
+                "id": "23088",
+                "nombre": "Brandon_Rivera",
+                "pin": "3333",
+                "saldo": 1750.0
+            },
+            {
+                "id": "23079",
+                "nombre": "Javier_Cifuentes",
+                "pin": "4444",
+                "saldo": 2200.0
+            },
+            {
+                "id": "23747",
+                "nombre": "Diego_Lopez",
+                "pin": "5555",
+                "saldo": 1300.0
+            },
+            {
+                "id": "23405",
+                "nombre": "Javier_Benitez",
+                "pin": "6666",
+                "saldo": 1800.0
+            }
+        ]
+    },
+    "Bantrab": {
+        "Cuentas": [
+            {
+                "id": "23089",
+                "nombre": "Pedro_Avila",
+                "pin": "7777",
+                "saldo": 3000.0
+            },
+            {
+                "id": "23415",
+                "nombre": "Javier_Lopez",
+                "pin": "8888",
+                "saldo": 2500.0
+            },
+            {
+                "id": "23088",
+                "nombre": "Brandon_Rivera",
+                "pin": "9999",
+                "saldo": 2750.0
+            },
+            {
+                "id": "23079",
+                "nombre": "Javier_Cifuentes",
+                "pin": "0000",
+                "saldo": 3200.0
+            },
+            {
+                "id": "23747",
+                "nombre": "Diego_Lopez",
+                "pin": "1212",
+                "saldo": 2300.0
+            },
+            {
+                "id": "23405",
+                "nombre": "Javier_Benitez",
+                "pin": "3434",
+                "saldo": 2800.0
+            }
+        ]
+    }
 }
